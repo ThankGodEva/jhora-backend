@@ -14,6 +14,44 @@ Route::post('/register/icreator', [RegisterController::class, 'registerICreator'
 //     Route::post('/business', [RegisterController::class, 'setupBusiness']);
 // });
 
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+    Route::get('/dashboard', function () {
+        $user = auth()->user();
+        $vendor = $user->vendor;
+
+        if (!$vendor) {
+            return response()->json(['error' => 'Vendor profile not found'], 404);
+        }
+
+        $stats = [
+            'totalOrders' => $vendor->orderItems()->count(),
+            'totalSales' => $vendor->orderItems()->sum('subtotal'),
+            'pendingOrders' => $vendor->orderItems()->whereHas('order', fn($q) => $q->where('status', 'pending'))->count(),
+            'revenue' => $vendor->orderItems()->whereHas('order', fn($q) => $q->where('status', 'completed'))->sum('subtotal'),
+        ];
+
+        $recentOrders = $vendor->orderItems()
+            ->with('order.user')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn($item) => [
+                'id' => $item->order->id,
+                'order_number' => $item->order->order_number,
+                'customer_name' => $item->order->user->name,
+                'date' => $item->created_at->format('M d, Y'),
+                'total' => $item->subtotal,
+                'items' => $item->quantity,
+                'status' => $item->order->status,
+            ]);
+
+        return response()->json([
+            'stats' => $stats,
+            'recentOrders' => $recentOrders,
+        ]);
+    });
+});
+
 Route::middleware('auth:sanctum')->prefix('vendor/setup')->group(function () {
     Route::post('/business', [RegisterController::class, 'setupBusiness']);
     // Route::post('/business', function (Request $request) {
