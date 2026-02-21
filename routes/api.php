@@ -366,6 +366,49 @@ Route::get('/products/{slug}', function ($slug) {
     ]);
 });
 
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+    Route::get('/payments', function () {
+        $vendor = auth()->user()->vendor;
+
+        if (!$vendor) {
+            return response()->json(['error' => 'Vendor profile not found'], 404);
+        }
+
+        // Mock stats - replace with real calculations
+        $stats = [
+            'available' => 125350,
+            'pending' => 0,
+            'totalEarned' => 350000,
+            'monthlyPayout' => 125350,
+        ];
+
+        $payouts = [
+            [
+                'id' => '1',
+                'amount' => 125350,
+                'status' => 'completed',
+                'date' => 'Feb 15, 2026',
+                'method' => 'Bank Transfer',
+                'reference' => 'PAY-20260215-001',
+            ],
+            // Add more mock or real payouts
+        ];
+
+        return response()->json([
+            'stats' => $stats,
+            'recentPayouts' => $payouts,
+        ]);
+    });
+
+    Route::post('/payouts/request', function (Request $request) {
+        $request->validate(['amount' => 'required|numeric|min:1000']);
+
+        // Create payout request logic here (e.g. save to Payout model)
+        // For now, just return success
+        return response()->json(['message' => 'Payout request submitted']);
+    });
+});
+
 // Cart routes
 Route::prefix('cart')->group(function () {
     Route::get('/', [App\Http\Controllers\CartController::class, 'index']);
