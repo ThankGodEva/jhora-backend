@@ -159,9 +159,14 @@ Route::get('/icreators', function () {
     return response()->json($vendors);
 });
 
-// Single vendor detail
-Route::get('/icreators/{slug}', function ($slug) {
-    $vendor = \App\Models\Vendor::where('slug', $slug)
+use App\Models\Vendor;
+
+// Single vendor by slug (supports @ prefix or plain slug)
+Route::get('/stores/{slug}', function ($slug) {
+    // Remove @ prefix if present
+    $cleanSlug = ltrim($slug, '@');
+
+    $vendor = Vendor::where('slug', $cleanSlug)
         ->where('is_active', true)
         ->where('verification_status', 'verified')
         ->firstOrFail();
@@ -171,16 +176,18 @@ Route::get('/icreators/{slug}', function ($slug) {
         'shop_name' => $vendor->shop_name,
         'slug' => $vendor->slug,
         'description' => $vendor->description,
-        'logo' => $vendor->logo ?? 'https://via.placeholder.com/160',
-        'banner' => $vendor->banner ?? 'https://via.placeholder.com/1200x400',
+        'logo' => $vendor->getLogoUrlAttribute(),
+        'banner' => $vendor->getCoverPhotoUrlAttribute(),
         'rating' => 4.8,
         'products_count' => $vendor->products()->count(),
     ]);
 });
 
-// Products for a specific vendor
-Route::get('/icreators/{slug}/products', function ($slug) {
-    $vendor = \App\Models\Vendor::where('slug', $slug)->firstOrFail();
+// Products for a vendor
+Route::get('/stores/{slug}/products', function ($slug) {
+    $cleanSlug = ltrim($slug, '@');
+
+    $vendor = Vendor::where('slug', $cleanSlug)->firstOrFail();
 
     $products = $vendor->products()
         ->where('status', 'published')
