@@ -168,6 +168,92 @@ Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
     });
 });
 
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+    // List products
+    Route::get('/products', function (Request $request) {
+        $vendor = $request->user()->vendor;
+        $status = $request->query('status');
+
+        $query = $vendor->products();
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $products = $query->with('images')->get()->map(fn($p) => [
+            'id' => $p->id,
+            'name' => $p->name,
+            'price' => $p->price,
+            'stock' => $p->stock_quantity,
+            'image' => $p->images->first()?->image_path,
+            'status' => $p->status,
+            'sales' => $p->orderItems()->count(),
+        ]);
+
+        return response()->json($products);
+    });
+
+    // Create product
+    Route::post('/products', function (Request $request) {
+        $vendor = $request->user()->vendor;
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'compare_price' => 'nullable|numeric|min:0',
+            'stock_quantity' => 'required|integer|min:0',
+            'sku' => 'nullable|string|max:100',
+            'status' => 'in:active,draft,low_stock',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $product = $vendor->products()->create($request->only([
+            'name', 'description', 'price', 'compare_price',
+            'stock_quantity', 'sku', 'status'
+        ]));
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $product->addMedia($image)->toMediaCollection('images');
+            }
+        }
+
+        return response()->json($product, 201);
+    });
+
+    // Single product details
+    Route::get('/products/{id}', function ($id) {
+        $vendor = auth()->user()->vendor;
+        $product = $vendor->products()->with('images', 'orderItems.order')->findOrFail($id);
+
+        return response()->json([
+            'id' => $product->id,
+            'name' => $product->name,
+            'description' => $product->description,
+            'price' => $product->price,
+            'compare_price' => $product->compare_price,
+            'stock_quantity' => $product->stock_quantity,
+            'sku' => $product->sku,
+            'status' => $product->status,
+            'images' => $product->images->pluck('image_path'),
+            'sales' => $product->orderItems->count(),
+            'orders' => $product->orderItems->map(fn($item) => [
+                'order_number' => $item->order->order_number,
+                'customer' => $item->order->user->name,
+                'quantity' => $item->quantity,
+                'total' => $item->subtotal,
+                'date' => $item->created_at->format('M d, Y'),
+            ]),
+            // Add reviews when ready
+        ]);
+    });
+});
+
 Route::middleware('auth:sanctum')->prefix('vendor/setup')->group(function () {
     Route::post('/business', [RegisterController::class, 'setupBusiness']);
     // Route::post('/business', function (Request $request) {
