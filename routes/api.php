@@ -52,6 +52,58 @@ Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
     });
 });
 
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+    Route::get('/analytics', function (Request $request) {
+        $user = $request->user();
+        $vendor = $user->vendor;
+
+        if (!$vendor) {
+            return response()->json(['error' => 'Vendor profile not found'], 404);
+        }
+
+        $range = $request->query('range', 'this_month');
+        $startDate = now()->startOfMonth();
+        if ($range === 'today') $startDate = now()->startOfDay();
+        if ($range === 'this_week') $startDate = now()->startOfWeek();
+        if ($range === 'last_3_months') $startDate = now()->subMonths(3)->startOfMonth();
+
+        $salesData = $vendor->orderItems()
+            ->whereHas('order', fn($q) => $q->where('created_at', '>=', $startDate))
+            ->selectRaw('DATE(created_at) as date, SUM(subtotal) as revenue, COUNT(*) as orders')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        $stats = [
+            'totalSales' => $vendor->orderItems()->whereHas('order', fn($q) => $q->where('status', 'completed'))->sum('subtotal'),
+            'totalOrders' => $vendor->orderItems()->count(),
+            'avgOrderValue' => $vendor->orderItems()->avg('subtotal') ?? 0,
+        ];
+
+        $topProducts = $vendor->products()
+            ->withCount('orderItems')
+            ->orderByDesc('order_items_count')
+            ->take(5)
+            ->get()
+            ->map(fn($p) => [
+                'name' => $p->name,
+                'price' => $p->price,
+                'sales' => $p->order_items_count,
+                'growth' => rand(5, 25), // placeholder
+                'image' => $p->images->first()?->image_path ?? null,
+            ]);
+
+        // ... similar for topCategories, customerMetrics ...
+
+        return response()->json([
+            'salesData' => $salesData,
+            'stats' => $stats,
+            'topProducts' => $topProducts,
+            // add topCategories, customerMetrics when ready
+        ]);
+    });
+});
+
 Route::middleware('auth:sanctum')->prefix('vendor/setup')->group(function () {
     Route::post('/business', [RegisterController::class, 'setupBusiness']);
     // Route::post('/business', function (Request $request) {
