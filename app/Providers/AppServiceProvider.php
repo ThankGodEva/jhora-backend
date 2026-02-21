@@ -3,8 +3,6 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
-
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,15 +17,8 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    // public function boot(): void
-    // {
-    //     //
-    // }
-    public function boot()
+    public function boot(): void
     {
-        // Prevent Sanctum from redirecting on API requests
-        EnsureFrontendRequestsAreStateful::macro('shouldPassThrough', function ($request) {
-            return $request->expectsJson() || $request->is('api/*');
-        });
+        //
     }
 }
