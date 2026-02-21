@@ -104,6 +104,70 @@ Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
     });
 });
 
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+    // List orders (filter by status)
+    Route::get('/orders', function (Request $request) {
+        $vendor = $request->user()->vendor;
+        $status = $request->query('status');
+
+        $query = $vendor->orderItems()->with('order.user');
+
+        if ($status) {
+            $query->whereHas('order', fn($q) => $q->where('status', $status));
+        }
+
+        $orders = $query->latest()->get()->map(fn($item) => [
+            'id' => $item->order->id,
+            'order_number' => $item->order->order_number,
+            'customer_name' => $item->order->user->name,
+            'date' => $item->created_at->format('M d, Y'),
+            'total' => $item->subtotal,
+            'items' => $item->quantity,
+            'status' => $item->order->status,
+        ]);
+
+        return response()->json($orders);
+    });
+
+    // Single order details
+    Route::get('/orders/{id}', function ($id) {
+        $vendor = auth()->user()->vendor;
+        $order = $vendor->orderItems()->where('order_id', $id)
+            ->with('order.user', 'product')
+            ->firstOrFail();
+
+        return response()->json([
+            'order_number' => $order->order->order_number,
+            'customer_name' => $order->order->user->name,
+            'customer_email' => $order->order->user->email,
+            'customer_phone' => $order->order->user->phone,
+            'shipping_address' => $order->order->shipping_address,
+            'date' => $order->created_at->format('M d, Y'),
+            'total' => $order->order->total_amount,
+            'items_count' => $vendor->orderItems()->where('order_id', $id)->count(),
+            'status' => $order->order->status,
+            'payment_method' => $order->order->payment_method,
+            'payment_status' => $order->order->payment_status,
+            'delivery_status' => $order->order->delivery_status,
+            'items' => $vendor->orderItems()->where('order_id', $id)->get()->map(fn($item) => [
+                'name' => $item->product->name,
+                'price' => $item->unit_price,
+                'quantity' => $item->quantity,
+                'image' => $item->product->images->first()?->image_path,
+            ]),
+        ]);
+    });
+
+    // Update order status
+    Route::patch('/orders/{id}/status', function (Request $request, $id) {
+        $request->validate(['status' => 'required|in:pending,shipped,completed,cancelled,returned']);
+        $vendor = auth()->user()->vendor;
+        $order = $vendor->orderItems()->where('order_id', $id)->firstOrFail()->order;
+        $order->update(['status' => $request->status]);
+        return response()->json(['message' => 'Status updated']);
+    });
+});
+
 Route::middleware('auth:sanctum')->prefix('vendor/setup')->group(function () {
     Route::post('/business', [RegisterController::class, 'setupBusiness']);
     // Route::post('/business', function (Request $request) {
