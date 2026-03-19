@@ -492,3 +492,7 @@ Route::get('/stores/{slug}/products', function ($slug) {
 
     return response()->json($products);
 });
+
+Route::post('/verify-paystack', [PaymentController::class, 'verifyPaystack']);
+
+Route::post('/webhooks/paystack', [\App\Http\Controllers\Webhook\PaystackWebhookController::class, 'handle']);
