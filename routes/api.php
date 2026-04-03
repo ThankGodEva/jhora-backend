@@ -424,6 +424,14 @@ Route::prefix('cart')->group(function () {
     Route::delete('/', [App\Http\Controllers\CartController::class, 'clear']);
 });
 
+// Wishlist routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']);
+    Route::delete('/wishlist', [WishlistController::class, 'clear']);
+});
+
 // Checkout / Orders
 Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store']);
 Route::get('/orders/{order_number}', [App\Http\Controllers\OrderController::class, 'show']);
