@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\ReviewController;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
@@ -499,6 +500,15 @@ Route::get('/stores/{slug}/products', function ($slug) {
         ]);
 
     return response()->json($products);
+});
+
+
+// routes/api.php
+Route::get('products/{product}/reviews', [ReviewController::class, 'index']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('products/{product}/reviews', [ReviewController::class, 'store']);
+    // You can add update/delete later if needed
 });
 
 Route::post('/verify-paystack', [PaymentController::class, 'verifyPaystack']);
