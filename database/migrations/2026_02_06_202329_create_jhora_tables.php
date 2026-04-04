@@ -156,6 +156,25 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        // Schema::create('reviews', function (Blueprint $table) {
+        //     $table->id();
+        //     // Links to the users table
+        //     $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            
+        //     // If products are in the same database:
+        //     // $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            
+        //     // If products are managed externally or by ID:
+        //     $table->unsignedBigInteger('product_id')->index();
+            
+        //     $table->unsignedTinyInteger('rating'); // Stores 1-5
+        //     $table->text('comment');
+        //     $table->timestamps();
+
+        //     // Optional: Ensure a user can only review a product once
+        //     $table->unique(['user_id', 'product_id']);
+        // });
+
         Schema::create('reviews', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();

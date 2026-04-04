@@ -1,39 +1,38 @@
 <?php
 
-
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Models\Review;
 use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
-    public function index($productId)
+    public function index(Product $product)
     {
-        $reviews = Review::with('user:id,name')
-            ->where('product_id', $productId)
-            ->where('is_approved', true)
+        $reviews = $product->reviews()
+            ->with('user:id,name,avatar')
             ->latest()
             ->get();
 
         return response()->json($reviews);
     }
 
-    public function store(Request $request, $productId)
+    public function store(Request $request, Product $product)
     {
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'required|string|min:5',
+            'comment' => 'required|string|max:1000',
         ]);
 
-        $review = Review::create([
+        $review = $product->reviews()->create([
             'user_id' => auth()->id(),
-            'product_id' => $productId,
             'rating' => $request->rating,
             'comment' => $request->comment,
+            // is_verified_purchase can be set here if you want
+            'is_verified_purchase' => true,   // you already have this column
         ]);
 
-        return response()->json($review->load('user:id,name'), 201);
+        return response()->json($review->load('user'), 201);
     }
 }
