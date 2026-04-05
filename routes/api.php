@@ -481,6 +481,24 @@ Route::get('/stores/{slug}', function ($slug) {
     ]);
 });
 
+// routes/api.php
+
+use App\Http\Controllers\Vendor\VendorDashboardController;
+
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+
+    Route::get('/dashboard', [VendorDashboardController::class, 'index']);
+
+    // You can add more vendor routes here later
+    // Route::get('/products', [VendorProductController::class, 'index']);
+});
+
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+
+    Route::get('/products', [VendorProductController::class, 'index']);
+
+});
+
 // Products for a vendor
 Route::get('/stores/{slug}/products', function ($slug) {
     $cleanSlug = ltrim($slug, '@');
