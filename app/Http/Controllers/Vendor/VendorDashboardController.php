@@ -12,33 +12,34 @@ class VendorDashboardController extends Controller
         $user = $request->user();
 
         if (!$user || !$user->vendor) {
-            return response()->json([
-                'error' => 'Vendor profile not found'
-            ], 404);
+            return response()->json(['error' => 'Vendor profile not found'], 404);
         }
 
         $vendor = $user->vendor;
 
         $stats = [
-            'totalOrders'      => 24,
+            'totalOrders'      => $vendor->orders()->count(),
             'totalSales'       => 1245000,
-            'pendingOrders'    => 7,
+            'pendingOrders'    => $vendor->orders()->where('status', 'pending')->count(),
             'revenueThisMonth' => 458000,
         ];
 
-        $recentOrders = [
-            [
-                'id'           => 1,
-                'order_number' => 'ORD-20260318-001',
-                'customer'     => 'Chibueze ThankGod',
-                'total'        => 45000,
-                'status'       => 'pending',
-                'date'         => '2026-03-18',
-            ],
-        ];
+        $recentOrders = $vendor->orders()
+            ->with('user')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn($order) => [
+                'id' => $order->id,
+                'order_number' => $order->order_number ?? 'ORD-'.$order->id,
+                'customer' => $order->user->name ?? 'Unknown',
+                'total' => $order->total_amount ?? 0,
+                'status' => $order->status,
+                'date' => $order->created_at->format('Y-m-d'),
+            ]);
 
         return response()->json([
-            'stats'        => $stats,
+            'stats' => $stats,
             'recentOrders' => $recentOrders,
         ]);
     }
